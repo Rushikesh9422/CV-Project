@@ -2,6 +2,7 @@ import streamlit as st
 import cv2
 import easyocr
 import re
+import numpy as np
 
 def enhance_face_image(face_image):
     # Convert the face image to grayscale
@@ -12,10 +13,7 @@ def enhance_face_image(face_image):
 
     return enhanced_face
 
-def extract_text_and_face(image_path):
-    # Load the image
-    image = cv2.imread(image_path)
-
+def extract_text_and_face(image):
     # Convert the image to grayscale
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
@@ -130,7 +128,11 @@ def extract_text_and_face(image_path):
     except:
         pass
 
-# Example usage
+# Streamlit UI
 st.title("Text and Face Extraction App")
-image_path = "1.jpg"
-extract_text_and_face(image_path)
+uploaded_image = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png"])
+
+if uploaded_image is not None:
+    # Read the image using OpenCV
+    image = cv2.imdecode(np.frombuffer(uploaded_image.read(), np.uint8), 1)
+    extract_text_and_face(image)
