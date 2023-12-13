@@ -1,7 +1,7 @@
+import streamlit as st
 import cv2
 import easyocr
 import re
-from google.colab.patches import cv2_imshow
 
 def enhance_face_image(face_image):
     # Convert the face image to grayscale
@@ -56,16 +56,13 @@ def extract_text_and_face(image_path):
                 enhanced_face = enhance_face_image(face_image)
 
                 # Display the original and enhanced face images
-                cv2_imshow(face_image)
-                cv2_imshow(enhanced_face)
-                cv2.waitKey(0)
-                cv2.destroyAllWindows()
+                st.image([face_image, enhanced_face], caption=['Original Face', 'Enhanced Face'], use_column_width=True)
 
                 face_detected = True  # Set to True after the first face is detected
 
         for detection in result:
             extracted_text.append(detection[1])  # Extracted text
-            print(detection[1])
+            st.text(detection[1])
 
     # Convert the extracted text list into a single string
     text = '\n'.join(extracted_text)
@@ -125,14 +122,15 @@ def extract_text_and_face(image_path):
         aadhar_number = ''.join(filter(str.isdigit, res[0]))
 
         if len(aadhar_number) >= 10:
-            print("Aadhar number is: " + aadhar_number)
+            st.write("Aadhar number is: " + aadhar_number)
         else:
-            print("Aadhar number not read")
+            st.write("Aadhar number not read")
         adh = aadhar_number
 
     except:
         pass
 
 # Example usage
+st.title("Text and Face Extraction App")
 image_path = "1.jpg"
 extract_text_and_face(image_path)
