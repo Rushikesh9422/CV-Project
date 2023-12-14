@@ -16,8 +16,8 @@ markdown-it-py==3.0.0
 MarkupSafe==2.1.3
 mdurl==0.1.2
 numpy==1.26.1
-opencv-python-headless==4.8.1.78
-opencv-contrib-python==4.8.1.78        
+opencv-python-headless
+opencv-contrib-python        
 importlib-metadata==6.8.0
 imutils==0.5.4
 packaging==23.2
@@ -48,6 +48,6 @@ validators==0.22.0
 watchdog==3.0.0
 zipp==3.17.0
 easyocr==1.7.1
-opencv-python-headless==4.8.1
-opencv-python-headless==4.8.1.78
+opencv-python-headless
+opencv-python-headless
 numpy==1.21.2
