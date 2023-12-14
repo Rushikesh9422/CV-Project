@@ -1,19 +1,15 @@
 import streamlit as st
+import pandas as pd
 import cv2
+import base64
+from io import BytesIO
+from PIL import Image
 import easyocr
-import re
-import numpy as np
 
-def enhance_face_image(face_image):
-    # Convert the face image to grayscale
-    gray_face = cv2.cvtColor(face_image, cv2.COLOR_BGR2GRAY)
+def extract_text_and_face(image_path):
+    # Load the image
+    image = cv2.imread(image_path)
 
-    # Apply histogram equalization to enhance the contrast
-    enhanced_face = cv2.equalizeHist(gray_face)
-
-    return enhanced_face
-
-def extract_text_and_face(image):
     # Convert the image to grayscale
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
@@ -29,8 +25,11 @@ def extract_text_and_face(image):
     # Find text regions using contour detection
     contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    # Initialize a list to store the extracted text
-    extracted_text = []
+    # Initialize a list to store the extracted text and face image base64 strings
+    extracted_data = []
+
+    # Initialize a variable to store the extracted text
+    text = ''
 
     # Initialize variables for face detection
     face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
@@ -50,89 +49,53 @@ def extract_text_and_face(image):
                 fx, fy, fw, fh = faces[0]
                 face_image = text_region[fy:fy + fh, fx:fx + fw]
 
-                # Enhance the face image
-                enhanced_face = enhance_face_image(face_image)
-
-                # Display the original and enhanced face images
-                st.image([face_image, enhanced_face], caption=['Original Face', 'Enhanced Face'], use_column_width=True)
+                # Save the face image to a base64 string
+                _, buffer_face = cv2.imencode('.png', face_image)
+                face_image_base64 = base64.b64encode(buffer_face).decode('utf-8')
+                st.image(face_image, caption="Detected Face", use_column_width=True)
 
                 face_detected = True  # Set to True after the first face is detected
 
         for detection in result:
-            extracted_text.append(detection[1])  # Extracted text
-            st.text(detection[1])
+            text += detection[1] + '\n'  # Concatenate the extracted text
 
-    # Convert the extracted text list into a single string
-    text = '\n'.join(extracted_text)
+            extracted_data.append({
+                'Text': detection[1],
+                'FaceImageBase64': face_image_base64,  # Save the face image base64 string
+                'X': x,
+                'Y': y,
+                'Width': w,
+                'Height': h
+            })
 
-    # Your existing code for processing the text
-    res = text.split()
-    name = None
-    dob = None
-    adh = None
-    sex = None
-    nameline = []
-    dobline = []
-    text0 = []
-    text1 = []
-    text2 = []
-    lines = text.split('\n')
-    for lin in lines:
-        s = lin.strip()
-        s = lin.replace('\n', '')
-        s = s.rstrip()
-        s = s.lstrip()
-        text1.append(s)
+    # Print the extracted text for reference
+    st.text("Extracted Text:")
+    st.text(text)
 
-    if 'female' in text.lower():
-        sex = "FEMALE"
-    else:
-        sex = "MALE"
-
-    text1 = list(filter(None, text1))
-    text0 = text1[:]
-
+    # Read the existing Excel file if it exists
     try:
-        # Cleaning first names
-        name = text0[0]
-        name = name.rstrip()
-        name = name.lstrip()
-        name = name.replace("8", "B")
-        name = name.replace("0", "D")
-        name = name.replace("6", "G")
-        name = name.replace("1", "I")
-        name = re.sub('[^a-zA-Z]+', ' ', name)
+        existing_df = pd.read_excel("output.xlsx")
+    except FileNotFoundError:
+        # If the file doesn't exist, create a new DataFrame
+        existing_df = pd.DataFrame()
 
-        # Cleaning DOB
-        dob = text0[1][-10:]
-        dob = dob.rstrip()
-        dob = dob.lstrip()
-        dob = dob.replace('l', '/')
-        dob = dob.replace('L', '/')
-        dob = dob.replace('I', '/')
-        dob = dob.replace('i', '/')
-        dob = dob.replace('|', '/')
-        dob = dob.replace('\"', '/1')
-        dob = dob.replace(":", "")
-        dob = dob.replace(" ", "")
+    # Append the new data to the existing DataFrame
+    existing_df = existing_df.append(pd.DataFrame(extracted_data), ignore_index=True)
 
-        # Cleaning Aadhar number details
-        aadhar_number = ''.join(filter(str.isdigit, res[0]))
+    # Save the updated DataFrame to the Excel file
+    existing_df.to_excel("output.xlsx", index=False)
+    st.markdown("[Download Excel File](output.xlsx)")
 
-        if len(aadhar_number) >= 10:
-            st.write("Aadhar number is: " + aadhar_number)
-        else:
-            st.write("Aadhar number not read")
-        adh = aadhar_number
-
-    except:
-        pass
-
-# Streamlit UI
+# Streamlit app
 st.title("Text and Face Extraction App")
-uploaded_image = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png"])
 
-if uploaded_image is not None:
-    # Read the image using OpenCV
-    image = cv2.imdecode(np.frombuffer(uploaded_image.read(), np.uint8), 1)
-    extract_text_and_face(image)
+# File upload
+uploaded_file = st.file_uploader("Choose an image file", type=["jpg", "jpeg", "png"])
+
+if uploaded_file is not None:
+    # Display the uploaded image
+    image = Image.open(uploaded_file)
+    st.image(image, caption="Uploaded Image", use_column_width=True)
+
+    # Perform text and face extraction
+    extract_text_and_face(uploaded_file.name)
